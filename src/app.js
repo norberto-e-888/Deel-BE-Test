@@ -135,7 +135,7 @@ app.post("/jobs/:id/pay", getProfile, async (req, res) => {
 });
 
 app.get("/admin/best-profession", getProfile, async (req, res) => {
-  // ! req.query should be validates using a libray like Joi, omitting from brevity
+  // ! req.query should be validated using a libray like Joi, omitting from brevity
   const query = {};
 
   if (req.query.start || req.query.end) {
@@ -189,6 +189,59 @@ app.get("/admin/best-profession", getProfile, async (req, res) => {
     profession: highestPaidProfession.dataValues.profession,
     totalIncome: highestPaidProfession.dataValues.totalIncome,
   });
+});
+
+app.get("/admin/best-clients", getProfile, async (req, res) => {
+  // ! req.query should be validated using a libray like Joi, omitting from brevity
+  const query = {};
+
+  if (req.query.start || req.query.end) {
+    query[s.Op.and] = [];
+
+    if (req.query.start) {
+      query[s.Op.and].push({
+        paymentDate: { [s.Op.gte]: new Date(req.query.start) },
+      });
+    }
+
+    if (req.query.end) {
+      query[s.Op.and].push({
+        paymentDate: { [s.Op.lte]: new Date(req.query.end) },
+      });
+    }
+  }
+
+  const { Job, Contract, Profile } = req.app.get("models");
+  const clientPayAggregations = await Job.findAll({
+    where: {
+      paid: true,
+      ...query,
+    },
+    include: {
+      model: Contract,
+      as: "Contract",
+      include: {
+        model: Profile,
+        as: "Client",
+      },
+    },
+    group: "Contract.ClientId",
+    attributes: [
+      [s.col("Contract.Client.firstName"), "firstName"],
+      [s.col("Contract.Client.lastName"), "lastName"],
+      [s.fn("SUM", s.col("price")), "totalPaid"],
+    ],
+    order: [[s.fn("SUM", s.col("price")), "DESC"]],
+    limit: req.query.limit ? parseInt(req.query.limit) : undefined,
+  });
+
+  return res.json(
+    clientPayAggregations.map((aggregation) => ({
+      firstName: aggregation.dataValues.firstName,
+      lastName: aggregation.dataValues.lastName,
+      totalPaid: aggregation.dataValues.totalPaid,
+    }))
+  );
 });
 
 module.exports = app;
