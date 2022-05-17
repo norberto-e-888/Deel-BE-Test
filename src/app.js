@@ -68,17 +68,6 @@ app.get("/jobs/unpaid", getProfile, async (req, res) => {
 
 app.post("/jobs/:id/pay", getProfile, async (req, res) => {
   const { Job, Contract, Profile } = req.app.get("models");
-  const job = await Job.findOne({
-    include: {
-      model: Contract,
-      as: "Contract",
-    },
-    where: {
-      id: req.params.id,
-    },
-  });
-
-  // ! in reality we should lock the two profiles and the job to prevent the transaction going throught in case they experience changes while we construct the transaction
 
   /*   const client = await Profile.findOne({
     where: {
@@ -94,37 +83,65 @@ app.post("/jobs/:id/pay", getProfile, async (req, res) => {
  */
   // return res.json({ client, contractor, job, profile: req.profile }); // For debugging purposes
 
-  if (!job || job.Contract.ClientId !== req.profile.id)
-    return res.status(404).end(); // purposely sending a 404 instead of a 403 to "hide" the existence of this job
-
-  if (job.paid) return res.status(400).send("Job is already paid");
-
-  if (job.price > req.profile.balance)
-    return res.status(400).send("Insufficient funds");
-
   const transaction = await sequelize.transaction();
 
   try {
-    await Profile.decrement("balance", {
-      by: job.price,
+    const lockedJob = await Job.findOne({
+      include: {
+        model: Contract,
+        as: "Contract",
+      },
       where: {
-        id: job.Contract.ClientId,
+        id: req.params.id,
+      },
+      lock: true,
+      transaction,
+    });
+
+    if (!lockedJob || lockedJob.Contract.ClientId !== req.profile.id) {
+      await transaction.rollback();
+      return res.status(404).send("Job not found"); // purposely sending a 404 instead of a 403 to "hide" the existence of this job
+    }
+
+    if (lockedJob.paid) {
+      await transaction.rollback();
+      return res.status(400).send("Job is already paid");
+    }
+
+    const originAccount = await Profile.findOne({
+      where: {
+        id: lockedJob.Contract.ClientId,
+      },
+      lock: true,
+      transaction,
+    });
+
+    if (lockedJob.price > originAccount.get("balance")) {
+      await transaction.rollback();
+      return res.status(400).send("Insufficient funds");
+    }
+
+    await Profile.decrement("balance", {
+      by: lockedJob.price,
+      where: {
+        id: lockedJob.Contract.ClientId,
       },
       transaction,
     });
 
     await Profile.increment("balance", {
-      by: job.price,
+      by: lockedJob.price,
       where: {
-        id: job.Contract.ContractorId,
+        id: lockedJob.Contract.ContractorId,
       },
       transaction,
     });
 
     await Job.update(
       { paid: true, paymentDate: new Date() },
-      { where: { id: job.id }, transaction }
+      { where: { id: lockedJob.id }, transaction }
     );
+
     await transaction.commit();
   } catch (error) {
     await transaction.rollback();
