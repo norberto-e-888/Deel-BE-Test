@@ -248,7 +248,7 @@ app.get("/admin/best-clients", getProfile, async (req, res) => {
       [
         s.literal(
           "`Contract->Client`.`firstName` || ' ' || `Contract->Client`.`lastName`"
-        ), // sqlite has no contact fn, would use s.fn('concat') otherwise
+        ), // sqlite has no concat fn, would use s.fn('concat') otherwise
         "fullName",
       ],
       [s.fn("SUM", s.col("price")), "paid"],
