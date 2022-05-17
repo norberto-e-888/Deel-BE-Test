@@ -227,9 +227,14 @@ app.get("/admin/best-clients", getProfile, async (req, res) => {
     },
     group: "Contract.ClientId",
     attributes: [
-      [s.col("Contract.Client.firstName"), "firstName"],
-      [s.col("Contract.Client.lastName"), "lastName"],
-      [s.fn("SUM", s.col("price")), "totalPaid"],
+      "id",
+      [
+        s.literal(
+          "`Contract->Client`.`firstName` || ' ' || `Contract->Client`.`lastName`"
+        ), // sqlite has no contact fn, would use s.fn('concat') otherwise
+        "fullName",
+      ],
+      [s.fn("SUM", s.col("price")), "paid"],
     ],
     order: [[s.fn("SUM", s.col("price")), "DESC"]],
     limit: req.query.limit ? parseInt(req.query.limit) : undefined,
@@ -237,9 +242,9 @@ app.get("/admin/best-clients", getProfile, async (req, res) => {
 
   return res.json(
     clientPayAggregations.map((aggregation) => ({
-      firstName: aggregation.dataValues.firstName,
-      lastName: aggregation.dataValues.lastName,
-      totalPaid: aggregation.dataValues.totalPaid,
+      id: aggregation.dataValues.id,
+      fullName: aggregation.dataValues.fullName,
+      paid: aggregation.dataValues.paid,
     }))
   );
 });
