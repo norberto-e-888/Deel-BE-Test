@@ -69,20 +69,6 @@ app.get("/jobs/unpaid", getProfile, async (req, res) => {
 app.post("/jobs/:id/pay", getProfile, async (req, res) => {
   const { Job, Contract, Profile } = req.app.get("models");
 
-  /*   const client = await Profile.findOne({
-    where: {
-      id: job.Contract.ClientId,
-    },
-  });
-
-  const contractor = await Profile.findOne({
-    where: {
-      id: job.Contract.ContractorId,
-    },
-  });
- */
-  // return res.json({ client, contractor, job, profile: req.profile }); // For debugging purposes
-
   const transaction = await sequelize.transaction();
 
   try {
