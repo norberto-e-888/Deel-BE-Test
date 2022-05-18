@@ -248,7 +248,7 @@ app.get("/admin/best-clients", getProfile, async (req, res) => {
     },
     group: "Contract.ClientId",
     attributes: [
-      "id",
+      [s.literal("`Contract->Client`.`id`"), "id"],
       [
         s.literal(
           "`Contract->Client`.`firstName` || ' ' || `Contract->Client`.`lastName`"
