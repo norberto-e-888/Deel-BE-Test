@@ -41,6 +41,7 @@ describe("Deel Test API", () => {
 
       expect(clientResponse.body.length).toBe(1);
       expect(clientResponse.body[0].ClientId).toBe(10);
+      expect(clientResponse.body[0].id).toBe(20);
 
       const contractorResponse = await request(app)
         .get("/contracts")
@@ -49,6 +50,7 @@ describe("Deel Test API", () => {
 
       expect(contractorResponse.body.length).toBe(1);
       expect(contractorResponse.body[0].ContractorId).toBe(11);
+      expect(contractorResponse.body[0].id).toBe(20);
     });
   });
 });
