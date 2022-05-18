@@ -190,14 +190,17 @@ app.post("/balances/deposit", getProfile, async (req, res) => {
       );
   }
 
-  const updatedProfile = await Profile.increment("balance", {
+  await Profile.increment("balance", {
     by: req.body.amount,
     where: {
       id: req.profile.id,
     },
   });
 
-  res.json(updatedProfile);
+  res.json({
+    ...req.profile.dataValues,
+    balance: req.profile.dataValues.balance + req.body.amount,
+  });
 });
 
 app.get("/admin/best-profession", getProfile, async (req, res) => {
