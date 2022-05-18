@@ -137,18 +137,22 @@ app.post("/jobs/:id/pay", getProfile, async (req, res) => {
       transaction,
     });
 
+    const paymentDate = new Date();
     await Job.update(
-      { paid: true, paymentDate: new Date() },
+      { paid: true, paymentDate },
       { where: { id: lockedJob.id }, transaction }
     );
 
     await transaction.commit();
+    res.json({
+      ...lockedJob.get(),
+      paid: true,
+      paymentDate,
+    });
   } catch (error) {
     await transaction.rollback();
-    return res.send("Server error");
+    res.send("Server error");
   }
-
-  res.json(job);
 });
 
 app.get("/admin/best-profession", getProfile, async (req, res) => {
