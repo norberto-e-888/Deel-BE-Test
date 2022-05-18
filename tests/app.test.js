@@ -6,10 +6,12 @@ const { sequelize } = require("../src/model");
 describe("Deel Test API", () => {
   let profileFactory;
   let contractFactory;
+  let jobFactory;
 
   beforeAll(async () => {
     profileFactory = ProfileFactory(sequelize.model("Profile"));
     contractFactory = ContractFactory(sequelize.model("Contract"));
+    jobFactory = JobFactory(sequelize.model("Job"));
   });
 
   beforeEach(async () => {
@@ -53,6 +55,68 @@ describe("Deel Test API", () => {
       expect(contractorResponse.body[0].id).toBe(20);
     });
   });
+
+  describe("POST /jobs/:id/pay", () => {
+    it("Allows an unpaid job to be paid by the client if they have enough balance", async () => {
+      const Profile = sequelize.model("Profile");
+      const Job = sequelize.model("Job");
+      const jobPrice = 200;
+      const clientOriginalBalance = 500;
+      const clientExpectedBalance = clientOriginalBalance - jobPrice;
+      const contractorOriginalBalance = 75;
+      const contractorExpectedBalance = contractorOriginalBalance + jobPrice;
+
+      expect(clientOriginalBalance >= jobPrice).toBe(true);
+
+      await profileFactory.add({
+        id: 10,
+        type: "client",
+        balance: clientOriginalBalance,
+      });
+
+      await profileFactory.add({
+        id: 11,
+        type: "contractor",
+        balance: contractorOriginalBalance,
+      });
+
+      await contractFactory.add({ id: 20, ClientId: 10, ContractorId: 11 });
+      await jobFactory.add({ id: 30, ContractId: 20, price: jobPrice });
+
+      await request(app)
+        .post("/jobs/30/pay")
+        .set("profile_id", "11")
+        .expect(404);
+
+      await request(app)
+        .post("/jobs/30/pay")
+        .set("profile_id", "10")
+        .expect(200);
+
+      const job = await Job.findOne({
+        where: {
+          id: 30,
+        },
+      });
+
+      const client = await Profile.findOne({
+        where: {
+          id: 10,
+        },
+      });
+
+      const contractor = await Profile.findOne({
+        where: {
+          id: 11,
+        },
+      });
+
+      expect(job.get("paid")).toBe(true);
+      expect(job.get("paymentDate")).toBeDefined();
+      expect(client.get("balance")).toBe(clientExpectedBalance);
+      expect(contractor.get("balance")).toBe(contractorExpectedBalance);
+    });
+  });
 });
 
 function ProfileFactory(profileModel) {
@@ -93,5 +157,26 @@ function ContractFactory(contractModel) {
         status,
       });
     },
+  };
+}
+
+function JobFactory(jobModel) {
+  return {
+    add: async ({
+      id,
+      ContractId,
+      description = faker.lorem.sentence(1),
+      price = 100,
+      paid = false,
+      paymentDate,
+    }) =>
+      jobModel.create({
+        id,
+        ContractId,
+        description,
+        price,
+        paid,
+        paymentDate,
+      }),
   };
 }
