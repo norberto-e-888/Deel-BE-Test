@@ -307,7 +307,7 @@ app.get("/admin/best-clients", getProfile, async (req, res) => {
       [s.fn("SUM", s.col("price")), "paid"],
     ],
     order: [[s.fn("SUM", s.col("price")), "DESC"]],
-    limit: req.query.limit ? parseInt(req.query.limit) : undefined,
+    limit: req.query.limit ? parseInt(req.query.limit) : 2,
   });
 
   return res.json(
