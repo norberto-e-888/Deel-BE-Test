@@ -1,8 +1,8 @@
 # Shortcuts taken
 
-- No separation of controller vs service, as in a real production app one would probably use a framework like NestJs that help enforce a clean code structure
+- No separation of controller vs service, as in a real production app one would probably use a framework like NestJs that helps enforce a clean code structure
 - Only 2 endpoints tested for the sake of displaying the gist of how I'd setup API testing with jest and supertest (in reality I'd use NestJs which sets up supertest + Jest testing out of the box)
-- No DTO validation (in reality one would use a library like Joi or class-validator to perform intrinsic object shape validations; meaning validations that can be performed without external context like: _is a number positive_, _is a value of a given data type_, _are there no unexpected keys_, etc.)
+- No DTO validation (in reality one would use a library like Joi or class-validator to perform intrinsic object shape validations; meaning validations that can be performed without external context. A few examples of this kind of validation would be: _is a number positive_, _is a value of a given data type_, _are there no unexpected keys_, etc.)
 
 # DEEL BACKEND TASK
 
