@@ -157,6 +157,7 @@ app.post("/jobs/:id/pay", getProfile, async (req, res) => {
 
 app.post("/balances/deposit", getProfile, async (req, res) => {
   // ! req.body should be validated using a library like Joi, omitting for brevity
+  // ! for example, we would validate that body.amount is a positive number
   if (req.profile.type !== "client") return res.status(403);
 
   const { Job, Contract, Profile } = req.app.get("models");
