@@ -155,6 +155,50 @@ app.post("/jobs/:id/pay", getProfile, async (req, res) => {
   }
 });
 
+app.post("/balances/deposit", getProfile, async (req, res) => {
+  if (req.profile.type !== "client") return res.status(403);
+
+  const { Job, Contract, Profile } = req.app.get("models");
+
+  const unpaidActiveJobs = await Job.findAll({
+    include: {
+      model: Contract,
+      as: "Contract",
+      where: {
+        status: "in_progress",
+        ClientId: req.profile.id,
+      },
+    },
+    where: {
+      paid: false,
+    },
+  });
+
+  const totalUnpaid = unpaidActiveJobs.reduce(
+    (total, job) => total + job.get("price"),
+    0
+  );
+
+  const maxDeposit = totalUnpaid * 0.25;
+
+  if (req.body.amount > maxDeposit) {
+    return res
+      .status(400)
+      .send(
+        `You cannot deposit more than 25% of your outstanding balance at a time, which currently is $${totalUnpaid}`
+      );
+  }
+
+  const updatedProfile = await Profile.increment("balance", {
+    by: req.body.amount,
+    where: {
+      id: req.profile.id,
+    },
+  });
+
+  res.json(updatedProfile);
+});
+
 app.get("/admin/best-profession", getProfile, async (req, res) => {
   // ! req.query should be validated using a libray like Joi, omitting from brevity
   const query = {};
